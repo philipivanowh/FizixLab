@@ -1,4 +1,4 @@
-import {Vec2d} from "./mathLib/Vec2d.js";
+import  Vec2  from "./Vec2";
 
 
 class Renderer {
@@ -95,5 +95,24 @@ void main() {
       gl.deleteProgram(prog);
     }
     return prog;
+  }
+
+  drawRect(x,y,w,h,color){
+    this.gl.bindVertexArray(this.vao);
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER,this.buffer);
+    this.gl.bufferData(
+        this.gl.ARRAY_BUFFER, 
+        new Float32Array([
+        x, y,
+        x + w, y,
+        x, y + h,
+        x, y + h,
+        x + w, y + h,
+        x + w, y
+    ])
+    ,gl.DYNAMIC_DRAW);
+
+    this.gl.uniform4fv(this.colorLoc,color);
+    this.gl.drawArrays(this.gl.TRIANGLES,0,6);
   }
 }
