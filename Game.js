@@ -1,30 +1,36 @@
 import Box from "./Box.js";
+import Renderer from "./Renderer.js";
+import Scene from "./Scene.js";
+import bodyType from "./Rigidbody.js";
+"use strict";
 
-class Game{
-  b1 = new Box(100,100,100,100, {r:1.0, g:0.5, b:1.0, a:1.0});
-  ground = new Box(50,1000,1000,200,{r:1.0, g:1.0, b:1.0, a:1.0});
 
-  constructor(){
-    this.canvas = document.getElementById("game");
-    this.renderer = new Renderer(canvas);
-    this.width = canvas.width;
-    this.height = canvas.height;
-  }
+const canvas = document.querySelector("#c");
+const renderer = new Renderer(canvas);
+const scene = new Scene();
 
-  update(){
-    this.b1.update();
-  }
+// Add boxes
+scene.add(new Box(100, 100, 80, 80, [184, 92, 92, 1], 1, bodyType.DYNAMIC));
+scene.add(new Box(50, 700, 1600, 50, [255, 255, 255, 1], 1, bodyType.STATIC));
 
-  draw(){
-    this.b1.draw(this.renderer);
-    this.b2.draw(this.renderer)
-  }
+document.querySelector(".spawnBox").addEventListener("click", () => {
+  const x = Math.random() * (canvas.width - 50);
+  const y = Math.random() * (canvas.height - 50);
+  const size = 20 + Math.random() * 80;
+  scene.add(new Box(x, y, size, size));
+});
 
-  loop(){
-    update();
-    draw();
-  }
+var lastTime = Date.now();
+function renderLoop() {
+  let currentTime = Date.now();
+  let deltaTime = (currentTime - lastTime) / 1000;
+  renderer.clear();
+  scene.draw(renderer);
+  scene.update(deltaTime);
+
+  lastTime = currentTime;
+
+  requestAnimationFrame(renderLoop);
 }
 
-var game = new Game();
-game.loop();
+renderLoop();
