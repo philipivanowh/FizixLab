@@ -1,3 +1,6 @@
+import Ball from "./Ball.js";
+import Box from "./Box.js";
+
 var vertexShaderSource = `#version 300 es
 
 // an attribute is an input (in) to a vertex shader.
@@ -9,6 +12,7 @@ uniform vec2 u_resolution;
 
 //translation to add to position
 uniform vec2 u_translation;
+
 
 // all shaders have a main function
 void main() {
@@ -75,6 +79,8 @@ export default class Renderer {
             this.program,
             "u_translation"
         );
+
+  
 
 
         this.gl.bindVertexArray(this.vao);
@@ -149,6 +155,37 @@ export default class Renderer {
         gl.clear(gl.COLOR_BUFFER_BIT);
     }
 
+    drawShape(shape){
+        if(shape instanceof Ball){
+            this.drawBall(shape);
+        }
+        else if(shape instanceof Box){
+            this.drawBox(shape);
+        }
+    }
+
+    drawBall(ball){
+        const gl = this.gl;
+
+        const r = ball.color[0];
+        const g = ball.color[1];
+        const b = ball.color[2];
+        const color = this.normalizeColor(r, g, b);
+        gl.uniform4f(this.colorUniformLocation, color[0], color[1], color[2], color[3]);
+        gl.bindVertexArray(this.vao);
+
+        gl.bufferData(
+            gl.ARRAY_BUFFER,
+            new Float32Array(ball.getBall()),
+            gl.DYNAMIC_DRAW
+        );
+
+        gl.uniform2f(this.translationUniformLocation, ball.pos.x, ball.pos.y);
+        
+        gl.drawArrays(gl.TRIANGLES, 0, ball.verticies.length);
+
+    }
+
     drawBox(box) {
         const gl = this.gl;
 
@@ -167,7 +204,9 @@ export default class Renderer {
         );
 
          // Set the translation.
+ 
         gl.uniform2f(this.translationUniformLocation, box.pos.x, box.pos.y);
-        gl.drawArrays(gl.TRIANGLES, 0, 6);
+      
+        gl.drawArrays(gl.TRIANGLES, 0, box.verticies.length);
     }
 }

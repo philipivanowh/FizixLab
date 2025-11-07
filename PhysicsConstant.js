@@ -1,0 +1,2 @@
+
+export var GRAVITATIONAL_STRENGTH = 9.8;

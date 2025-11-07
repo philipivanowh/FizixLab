@@ -10,13 +10,13 @@ export default class Scene {
 
     draw(renderer) {
         this.objects.forEach(object => {
-            renderer.drawBox(object);
+            renderer.drawShape(object);
         });
     }
 
     update(dt) {
         this.objects.forEach(object => {
-            object.update(dt);
+            object.update(dt,this);
         });
     }
 }

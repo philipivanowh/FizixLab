@@ -10,9 +10,14 @@ body {
   padding: 20px;
 }
 
-canvas {
+.spawnBall{
+  position: relative;
+  top: 10px;
+  left: 10px;
   padding: 20px;
-  margin: 10px;
+}
+
+canvas {
   width: 1720px;
   height: 780px;
   display: block;
