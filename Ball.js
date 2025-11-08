@@ -1,12 +1,17 @@
 import Vec2 from "./Vec2.js";
 import bodyType from "./Rigidbody.js";
 import Shape from "./Shape.js";
+import { GRAVITATIONAL_STRENGTH } from "./PhysicsConstant.js";
+
+
+const PIXELS_PER_METER = 100;
 
 export default class Ball extends Shape{
   constructor(pos,vel,acc,radius, color, mass, bodyType) {
     super(pos);
     this.vel = vel;
     this.acc = acc;
+    this.acc.y = PIXELS_PER_METER * GRAVITATIONAL_STRENGTH
     this.radius = radius;
     this.color = color;
     this.mass = mass;
@@ -14,6 +19,7 @@ export default class Ball extends Shape{
     this.steps = 40;
     this.angle = (Math.PI * 2) / this.steps;
     this.verticies = this.generateVerticies();
+    this.verticiesSize = this.verticies.length;
   }
 
   update(dt,scene){
