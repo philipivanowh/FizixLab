@@ -1,14 +1,12 @@
 import Vec2 from "./Vec2.js";
 import bodyType from "./Rigidbody.js";
 import Shape from "./Shape.js";
-import PhysicsBody from "./PhysicsBody.js";
-import { DEFAULT_RESTITUTION } from "./PhysicsConstant.js";
 
 export default class Ball extends Shape{
-  constructor(pos,vel,acc,radius, color, density, type, options = {}) {
-    super(pos.clone());
-    this.vel = vel.clone();
-    this.acc = acc.clone();
+  constructor(pos,vel,acc,radius, color, mass, bodyType) {
+    super(pos);
+    this.vel = vel;
+    this.acc = acc;
     this.radius = radius;
     this.color = color;
     this.mass = density || 1;
@@ -38,13 +36,42 @@ export default class Ball extends Shape{
     this.verticies = this.generateVerticies();
   }
 
-  syncFromPhysics(){
-    if (!this.physicsBody) {
-      return;
+  update(dt,scene){
+    if (this.bodyType === bodyType.STATIC) return;
+
+    if (this.bodyType === bodyType.DYNAMIC) {
+      this.vel.x += this.acc.x * dt;
+      this.vel.y += this.acc.y * dt;
+      this.pos.x += this.vel.x * dt;
+      this.pos.y += this.vel.y * dt;
     }
 
-    this.pos = this.physicsBody.getPosition().clone();
-    this.vel = this.physicsBody.getLinearVelocity().clone();
+     this.updateBallvsBallCollision(scene);
+  }
+
+  updateBallvsBallCollision(scene){
+    scene.objects.forEach(object => {
+        if(object === this){
+            return;
+        }
+        if(object instanceof Ball){
+
+            //collision detected
+            if(this.isCollidingBallvsBall(this,object)){
+                this.penetrationResolutionBallvsBall(this,object);
+                this.collisionResolutionBallvsBall(this,object);
+            }
+        }
+    });
+  }
+
+  
+
+  isCollidingBallvsBall(b1,b2){
+    let distanceVec = b1.pos.subtract(b2.pos);
+
+            //collision detected
+    return (distanceVec.length() < b1.radius + b2.radius);
   }
 
   update(dt){

@@ -1,47 +1,32 @@
 import Vec2 from "./Vec2.js";
 import bodyType from "./Rigidbody.js";
 import Shape from "./Shape.js";
-import PhysicsBody from "./PhysicsBody.js";
-import { DEFAULT_RESTITUTION } from "./PhysicsConstant.js";
+import { GRAVITATIONAL_STRENGTH } from "./PhysicsConstant.js";
+
+const PIXELS_PER_METER = 100;
+const GRAVITY = GRAVITATIONAL_STRENGTH;
 
 export default class Box extends Shape {
-  constructor(pos, vel, acc, width, height, color, density, type, options = {}) {
-    super(pos.clone());
-    this.vel = vel.clone();
-    this.acc = acc.clone();
+  constructor(pos,vel,acc, width, height, color, mass, bodyType) {
+    super(pos);
+    this.vel = vel;
+    this.acc = acc;
     this.width = width;
     this.height = height;
-    this.bodyType = type;
+    this.bodyType = bodyType;
+    this.acc.y = 0 * PIXELS_PER_METER;
     this.color = color;
-    this.mass = density || 1;
-
-    const restitution = options.restitution ?? DEFAULT_RESTITUTION;
-    const isStatic = type === bodyType.STATIC;
-    const requestedDensity = density || 1;
-
-    const { body, errorMessage } = PhysicsBody.createBoxBody(
-      width,
-      height,
-      pos,
-      requestedDensity,
-      isStatic,
-      restitution
-    );
-
-    if (!body) {
-      throw new Error(errorMessage);
-    }
-
-    this.physicsBody = body;
-    this.physicsBody.setLinearVelocity(vel);
+    this.mass = mass || 1;
 
     // ✅ Centered vertices (origin is center)
     const w = width / 2;
     const h = height / 2;
-    this.vertices = [
+
+    this.verticies = [
       new Vec2(-w, -h),
       new Vec2(w, -h),
       new Vec2(w, h),
+
       new Vec2(w, h),
       new Vec2(-w, h),
       new Vec2(-w, -h),
@@ -63,36 +48,11 @@ export default class Box extends Shape {
   }
 
   getRect() {
-    const v0 = this.vertices[0];
-    const v1 = this.vertices[1];
-    const v2 = this.vertices[2];
-    const v3 = this.vertices[3];
-
-    // 6 verts -> 12 numbers (x,y)
-    return [
-      v0.x,
-      v0.y,
-      v1.x,
-      v1.y,
-      v2.x,
-      v2.y, // tri 1
-
-      v0.x,
-      v0.y,
-      v2.x,
-      v2.y,
-      v3.x,
-      v3.y, // tri 2
-    ];
+    let verticies = [];
+    this.verticies.forEach((vertex) => {
+      verticies.push(vertex.x, vertex.y);
+    });
+    return verticies;
   }
 
-  //return the location of each verticies of the polygonin the canvas
-  getVertexWorldPos() {
-    const out = [];
-    for (let i = 0; i < this.vertices.length; i++) {
-      const v = this.vertices[i];
-      out.push(new Vec2(v.x + this.pos.x, v.y + this.pos.y));
-    }
-    return out;
-  }
 }

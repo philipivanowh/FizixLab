@@ -182,7 +182,7 @@ export default class Renderer {
 
         gl.uniform2f(this.translationUniformLocation, ball.pos.x, ball.pos.y);
         
-        gl.drawArrays(gl.TRIANGLES, 0, ball.verticiesSize);
+        gl.drawArrays(gl.TRIANGLES, 0, ball.verticies.length);
 
     }
 
@@ -207,6 +207,6 @@ export default class Renderer {
  
         gl.uniform2f(this.translationUniformLocation, box.pos.x, box.pos.y);
       
-        gl.drawArrays(gl.TRIANGLES, 0, box.verticiesSize);
+        gl.drawArrays(gl.TRIANGLES, 0, box.verticies.length);
     }
 }
