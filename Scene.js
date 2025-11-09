@@ -63,7 +63,6 @@ export default class Scene {
           )
             continue;
 
-            console.log(objectA.pos);
           //detect every collision between the two objects
           let hit = this.collide(objectA, objectB);
           if (hit.result) {
@@ -71,10 +70,11 @@ export default class Scene {
             if (objectA.bodyType == bodyType.STATIC)
              objectB.translate(hit.normal.multiply(hit.depth));
             else if (objectB.bodyType == bodyType.STATIC)
-              objectA.translate(-hit.normal.multiply(hit.depth));
+              objectA.translate(hit.normal.multiply(-hit.depth));
             else {
-              objectA.translate(-hit.normal.multiply(hit.depth / 2));
-              objectB.translate(hit.normal.multiply(hit.depth / 2));
+                const correction = hit.normal.multiply(hit.depth/2);
+              objectA.translate(correction.negate());
+              objectB.translate(correction);
             }
 
             this.resolveCollision(objectA, objectB, hit.normal, hit.depth);
@@ -158,7 +158,6 @@ export default class Scene {
           objectA.pos,
           vertsA
         );
-        console.log(hit);
         if (!hit.result) return { result: false };
         normal = hit.normal.negate(); // make normal point from A(Box) -> B(Ball)
         depth = hit.depth;

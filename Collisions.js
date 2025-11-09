@@ -61,7 +61,6 @@ function findArithmeticMean(vertices) {
 
 /* ---------- circle vs polygon (with polygon center) ---------- */
 export function intersectCirclePolygon(circleCenter, circleRadius, polygonCenter, vertices) {
-  console.log(circleCenter);
   let normal = Vec2.ZERO;
   let depth = Number.POSITIVE_INFINITY;
 

@@ -1,6 +1,7 @@
 // Ball.js
 import Vec2 from "./Vec2.js";
 import Body from "./Body.js";
+import AABB from "./AABB.js";
 // import { GRAVITATIONAL_STRENGTH } from "./PhysicsConstant.js"; // (unused here)
 
 export default class Ball extends Body {
@@ -21,8 +22,8 @@ export default class Ball extends Body {
     this.steps = 40;
     this.angle = (Math.PI * 2) / this.steps;
 
-    this.vertices = this.generateVertices();   // use consistent name
-    this.verticesSize = this.vertices.length * 2; // number of floats (x,y per vertex)
+    this.vertices = this.generateVertices(); // use consistent name
+    this.verticesSize = this.vertices.length; // number of floats (x,y per vertex)
   }
 
   // LOCAL-SPACE triangles (center is at 0,0 — shader adds translation)
@@ -35,9 +36,9 @@ export default class Ball extends Body {
       const newX = this.radius * Math.cos(theta);
       const newY = this.radius * Math.sin(theta);
 
-      verts.push(new Vec2(0, 0));          // center
-      verts.push(new Vec2(prevX, prevY));  // previous rim point
-      verts.push(new Vec2(newX, newY));    // new rim point
+      verts.push(new Vec2(0, 0)); // center
+      verts.push(new Vec2(prevX, prevY)); // previous rim point
+      verts.push(new Vec2(newX, newY)); // new rim point
 
       prevX = newX;
       prevY = newY;
@@ -64,5 +65,23 @@ export default class Ball extends Body {
     }
     this.transformUpdateRequired = false;
     return out;
+  }
+
+  getAABB() {
+    if (this.aabbUpdateRequired) {
+      let minX = Number.POSITIVE_INFINITY;
+      let minY = Number.POSITIVE_INFINITY;
+      let maxX = Number.NEGATIVE_INFINITY;
+      let maxY = Number.NEGATIVE_INFINITY;
+
+      minX = this.pos.x - this.radius;
+      minY = this.pos.y - this.radius;
+      maxX = this.pos.x + this.radius;
+      maxY = this.pos.y + this.radius;
+
+      this.aabb = new AABB(minX, minY, maxX, maxY);
+    }
+    this.aabbUpdateRequired = true;
+    return this.aabb;
   }
 }
