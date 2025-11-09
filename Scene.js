@@ -47,7 +47,7 @@ export default class Scene {
       }
 
       //collision step
-      for (let i = 0; i < this.objects.length; i++) {
+      for (let i = 0; i < this.objects.length-1; i++) {
         const objectA = this.objects[i];
 
         //update the movement
@@ -63,17 +63,18 @@ export default class Scene {
           )
             continue;
 
+            console.log(objectA.pos);
           //detect every collision between the two objects
           let hit = this.collide(objectA, objectB);
           if (hit.result) {
             //penetration resolution
             if (objectA.bodyType == bodyType.STATIC)
-                objectB.translate(normal.multiply(depth));
+             objectB.translate(hit.normal.multiply(hit.depth));
             else if (objectB.bodyType == bodyType.STATIC)
-              objectA.translate(-normal.multiply(depth));
+              objectA.translate(-hit.normal.multiply(hit.depth));
             else {
-              objectA.translate(-normal.multiply(depth / 2));
-              objectB.translate(normal.multiply(depth / 2));
+              objectA.translate(-hit.normal.multiply(hit.depth / 2));
+              objectB.translate(hit.normal.multiply(hit.depth / 2));
             }
 
             this.resolveCollision(objectA, objectB, hit.normal, hit.depth);
@@ -83,15 +84,15 @@ export default class Scene {
     }
 
     //check for objects that are out of frame
-    removeObjects();
+    this.removeObjects();
   }
 
   removeObjects() {
     for(let i = 0; i < this.objects.length; i++){
-        let box = objects[i].getAABB();
+        let box = this.objects[i].getAABB();
 
-        if(box.max.y < viewBottom){
-            objects.splice(i,1);
+        if(box.max.y < this.viewBottom){
+            this.objects.splice(i,1);
         }
     }
   }
@@ -111,34 +112,19 @@ export default class Scene {
     if (Vec2.dot(relativeVelocity, normal) > 0) return;
 
     // coefficient of restitution
-    const e = Math.min(bodyA.restitution ?? 0, bodyB.restitution ?? 0);
+    const e = Math.min(bodyA.restitution, bodyB.restitution);
 
     // scalar impulse
     let j = -(1 + e) * Vec2.dot(relativeVelocity, normal);
-    const invMassSum = (bodyA.invMass ?? 0) + (bodyB.invMass ?? 0);
-    if (invMassSum === 0) return; // both static
-
-    j /= invMassSum;
+    j /= bodyA.invMass + bodyB.invMass;
 
     const impulse = normal.multiply(j);
 
     // apply linear impulse
     bodyA.linearVel = bodyA.linearVel.subtract(
-      impulse.multiply(bodyA.invMass ?? 0)
+      impulse.multiply(bodyA.invMass)
     );
-    bodyB.linearVel = bodyB.linearVel.add(impulse.multiply(bodyB.invMass ?? 0));
-
-    // --- optional: positional correction to prevent sinking / jitter ---
-    // tweak percent (Baumgarte) and slop to taste.
-    const percent = 0.8; // 0.2–0.8 typical
-    const slop = 0.01; // pixels/meters depending on your units
-    const correctionMag = (Math.max(depth - slop, 0) / invMassSum) * percent;
-    const correction = normal.multiply(correctionMag);
-
-    if (bodyA.invMass > 0)
-      bodyA.pos = bodyA.pos.subtract(correction.multiply(bodyA.invMass));
-    if (bodyB.invMass > 0)
-      bodyB.pos = bodyB.pos.add(correction.multiply(bodyB.invMass));
+    bodyB.linearVel = bodyB.linearVel.add(impulse.multiply(bodyB.invMass));
   }
 
   /**

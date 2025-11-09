@@ -12,14 +12,14 @@ const renderer = await createRenderer(canvas);
 const scene = new Scene();
 
 // Add boxes
-var boxPos = new Vec2(canvas.width/2, 200);
-var boxVel = new Vec2(0,0);
-var boxAcc = new Vec2(0,0);
+var boxPos = new Vec2(canvas.width/2+500, 200);
+var boxVel = new Vec2(-10,0);
+var boxAcc = new Vec2(-0.0085,0);
 var box = new Box(boxPos,boxVel,boxAcc, 80, 80, [184, 92, 92, 1], 1, bodyType.DYNAMIC);
 
-var boxPos2 = new Vec2(canvas.width/2-300, 300);
-var boxVel2 = new Vec2(1,-0.1);
-var boxAcc2 = new Vec2(0,0);
+var boxPos2 = new Vec2(200, 200);
+var boxVel2 = new Vec2(1,0);
+var boxAcc2 = new Vec2(0.01,0);
 var box2 = new Box(boxPos2,boxVel2,boxAcc2, 80, 80, [184, 92, 92, 1], 1, bodyType.DYNAMIC);
 
 var groundPos = new Vec2(850, 50);

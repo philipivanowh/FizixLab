@@ -1,3 +1,4 @@
+import Vec2 from "./Vec2.js";
 export default class AABB{
 
     constructor(minX,minY,maxX,maxY){

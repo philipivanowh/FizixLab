@@ -110,7 +110,7 @@ export default class Renderer {
 
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(ball.getBall()), gl.DYNAMIC_DRAW);
     gl.uniform2f(this.translationUniformLocation, ball.pos.x, ball.pos.y);
-    gl.drawArrays(gl.TRIANGLES, 0, ball.verticiesSize);
+    gl.drawArrays(gl.TRIANGLES, 0, ball.verticesSize);
   }
 
   drawBox(box) {
@@ -122,7 +122,7 @@ export default class Renderer {
 
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(box.getRect()), gl.DYNAMIC_DRAW);
     gl.uniform2f(this.translationUniformLocation, box.pos.x, box.pos.y);
-    gl.drawArrays(gl.TRIANGLES, 0, box.verticiesSize);
+    gl.drawArrays(gl.TRIANGLES, 0, box.verticesSize);
   }
 }
 

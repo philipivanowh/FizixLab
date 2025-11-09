@@ -1,15 +1,15 @@
 import Vec2 from "./Vec2.js";
-import bodyType from "./Rigidbody.js";
 import Body from "./Body.js";
+import AABB from "./AABB.js";
 import { GRAVITATIONAL_STRENGTH } from "./PhysicsConstant.js";
 
 export default class Box extends Body {
   constructor(pos, vel, acc, width, height, color, mass, bodyType) {
-    super(pos, vel, acc, mass,bodyType);
+    super(pos, vel, acc, mass, bodyType);
     this.width = width;
     this.height = height;
     this.color = color;
-    this.verticiesSize = 6;
+    this.verticesSize = 6;
 
     // ✅ Centered vertices (origin is center)
     const w = width / 2;
@@ -55,6 +55,29 @@ export default class Box extends Body {
       const v = this.vertices[i];
       out.push(new Vec2(v.x + this.pos.x, v.y + this.pos.y));
     }
+    this.transformUpdateRequired = false;
     return out;
+  }
+
+  getAABB() {
+    if (this.aabbUpdateRequired) {
+      let minX = Number.POSITIVE_INFINITY;
+      let minY = Number.POSITIVE_INFINITY;
+      let maxX = Number.NEGATIVE_INFINITY;
+      let maxY = Number.NEGATIVE_INFINITY;
+
+      let verticies = this.getVertexWorldPos();
+
+      for (let i = 0; i < verticies.length; i++) {
+        minX = Math.min(minX, verticies[i].x);
+        minY = Math.min(minY, verticies[i].y);
+        maxX = Math.max(maxX, verticies[i].x);
+        maxY = Math.max(maxY, verticies[i].y);
+      }
+
+      this.aabb = new AABB(minX, minY, maxX, maxY);
+    }
+    this.aabbUpdateRequired = true;
+    return this.aabb;
   }
 }
