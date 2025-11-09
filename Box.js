@@ -44,40 +44,24 @@ export default class Box extends Shape {
       new Vec2(w, h),
       new Vec2(w, h),
       new Vec2(-w, h),
+      new Vec2(-w, -h),
     ];
   }
 
-  syncFromPhysics() {
-    if (!this.physicsBody) {
-      return;
+  update(dt, scene) {
+    if (this.bodyType === bodyType.STATIC) return;
+
+    if (this.bodyType === bodyType.DYNAMIC) {
+      this.vel.x += this.acc.x * dt;
+      this.vel.y += this.acc.y * dt;
+
+      this.pos.x += this.vel.x * dt;
+      this.pos.y += this.vel.y * dt;
+
     }
 
-    this.pos = this.physicsBody.getPosition().clone();
-    this.vel = this.physicsBody.getLinearVelocity().clone();
   }
 
-  update(dt) {
-    if (this.bodyType === bodyType.KINEMATIC && this.physicsBody) {
-      const delta = this.vel.multiply(dt);
-      this.pos = this.pos.add(delta);
-      this.physicsBody.moveTo(this.pos);
-    }
-  }
-
-  //find the min and max project of the polygon based on the axis
-  projectVerticies(vertices, axis) {
-    let min = Number.POSITIVE_INFINITY;
-    let max = Number.NEGATIVE_INFINITY;
-    for (let i = 0; i < vertices.length; i++) {
-      const d = Vec2.dot(vertices[i], axis);
-      if (d < min) min = d;
-      if (d > max) max = d;
-    }
-    return [min, max];
-  }
-
-  // LOCAL-SPACE triangles (no position added)
-  // Useful if you use a model matrix in your shader
   getRect() {
     const v0 = this.vertices[0];
     const v1 = this.vertices[1];
