@@ -22,8 +22,6 @@ var groundVel = new Vec2(0,0);
 var groundAcc = new Vec2(0,0);
 var ground = new Box(groundPos, groundVel,groundAcc ,1600, 50, [255, 255, 255, 1], 1, bodyType.STATIC);
 
-<<<<<<< HEAD
-=======
 
 var ball1Pos = new Vec2(200, 100);
 var ball1Vel = new Vec2(200,0);
@@ -40,7 +38,6 @@ var ball3Pos = new Vec2(1000, 150);
 var ball3Vel = new Vec2(-500,0);
 var ball3Acc = new Vec2(0,0);
 var ball3 = new Ball(ball3Pos,ball3Vel,ball3Acc,70,[100, 200, 20, 1],1,bodyType.DYNAMIC);
->>>>>>> parent of 1f2598a (BoxSAT Collision)
 scene.add(box);
 scene.add(ground);
 scene.add(ball1);
