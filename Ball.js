@@ -1,39 +1,25 @@
 import Vec2 from "./Vec2.js";
 import bodyType from "./Rigidbody.js";
 import Shape from "./Shape.js";
+import { GRAVITATIONAL_STRENGTH } from "./PhysicsConstant.js";
+
+
+const PIXELS_PER_METER = 100;
 
 export default class Ball extends Shape{
   constructor(pos,vel,acc,radius, color, mass, bodyType) {
     super(pos);
     this.vel = vel;
     this.acc = acc;
+    this.acc.y = PIXELS_PER_METER * GRAVITATIONAL_STRENGTH
     this.radius = radius;
     this.color = color;
-    this.mass = density || 1;
-    this.bodyType = type;
+    this.mass = mass;
+    this.bodyType = bodyType;
     this.steps = 40;
     this.angle = (Math.PI * 2) / this.steps;
-
-    const restitution = options.restitution ?? DEFAULT_RESTITUTION;
-    const isStatic = type === bodyType.STATIC;
-    const requestedDensity = density || 1;
-
-    const { body, errorMessage } = PhysicsBody.createCircleBody(
-      radius,
-      pos,
-      requestedDensity,
-      isStatic,
-      restitution
-    );
-
-    if (!body) {
-      throw new Error(errorMessage);
-    }
-
-    this.physicsBody = body;
-    this.physicsBody.setLinearVelocity(vel);
-
     this.verticies = this.generateVerticies();
+    this.verticiesSize = this.verticies.length;
   }
 
   update(dt,scene){
@@ -74,12 +60,27 @@ export default class Ball extends Shape{
     return (distanceVec.length() < b1.radius + b2.radius);
   }
 
-  update(dt){
-    if (this.bodyType === bodyType.KINEMATIC && this.physicsBody) {
-      const delta = this.vel.multiply(dt);
-      this.pos = this.pos.add(delta);
-      this.physicsBody.moveTo(this.pos);
-    }
+  penetrationResolutionBallvsBall(b1,b2){
+    let distanceVec = b1.pos.subtract(b2.pos);
+    let penetration_depth = b1.radius + b2.radius - distanceVec.length();
+    let penetration_resolution = distanceVec.normalize().multiply(penetration_depth/2);
+    b1.pos = b1.pos.add(penetration_resolution);
+    b2.pos = b2.pos.add(penetration_resolution.multiply(-1));
+  }
+
+  collisionResolutionBallvsBall(b1,b2){
+    let normal = b1.pos.subtract(b2.pos).normalize();
+    let relativeVel = b1.vel.subtract(b2.vel);
+    let seperateVel = Vec2.dot(relativeVel,normal);
+    let new_seperateVel = -seperateVel;
+    let sepeperateVelVec = normal.multiply(new_seperateVel);
+
+    b1.vel = b1.vel.add(sepeperateVelVec);
+    b2.vel = b2.vel.add(sepeperateVelVec.multiply(-1));
+  }
+
+  momentumDisplay(){
+    //let momentum = 
   }
 
  generateVerticies() {
