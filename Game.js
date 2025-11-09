@@ -13,11 +13,11 @@ const scene = new Scene();
 
 // Add boxes
 var boxPos = new Vec2(canvas.width/2+500, 200);
-var boxVel = new Vec2(-10,0);
-var boxAcc = new Vec2(-0.0085,-0.001);
-var box = new Box(boxPos,boxVel,boxAcc, 80, 80, [184, 92, 92, 1], 1, bodyType.DYNAMIC);
+var boxVel = new Vec2(0,0);
+var boxAcc = new Vec2(0,0);
+var box = new Box(boxPos,boxVel,boxAcc, 80, 80, [184, 92, 92, 1], 100, bodyType.DYNAMIC);
 
-var boxPos2 = new Vec2(200, 200);
+var boxPos2 = new Vec2(100, 600);
 var boxVel2 = new Vec2(1,0);
 var boxAcc2 = new Vec2(0,0);
 var box2 = new Box(boxPos2,boxVel2,boxAcc2, 80, 80, [184, 92, 92, 1], 1, bodyType.DYNAMIC);
@@ -29,7 +29,7 @@ var ground = new Box(groundPos, groundVel,groundAcc ,1600, 50, [255, 255, 255, 1
 
 
 var ball1Pos = new Vec2(200, 400);
-var ball1Vel = new Vec2(1,-4);
+var ball1Vel = new Vec2(0,0);
 var ball1Acc = new Vec2(0,0);
 var ball1 = new Ball(ball1Pos,ball1Vel,ball1Acc,50,[255, 200, 20, 1],5,bodyType.DYNAMIC);
 
@@ -73,6 +73,11 @@ var lastTime = Date.now();
 function renderLoop() {
   let currentTime = Date.now();
   let deltaTime = (currentTime - lastTime);
+
+  console.groupCollapsed("Frame");
+  console.log("DeltaTime" + deltaTime/1000);
+  console.log("Body Count" + scene.bodyCount());
+  console.groupEnd();
   renderer.clear();
   scene.update(deltaTime,20);
   scene.draw(renderer);

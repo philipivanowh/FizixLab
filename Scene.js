@@ -8,6 +8,7 @@ import Box from "./Box.js";
 import Vec2 from "./Vec2.js";
 import bodyType from "./Rigidbody.js";
 import Math from "./Math.js";
+import Manifold from "./Manifold.js";
 
 const MIN_ITERATIONS = 1;
 const MAX_ITERATIONS = 128;
@@ -22,8 +23,13 @@ const MAX_BODY_SIZE = 64*64;
 export default class Scene {
   constructor() {
     this.objects = [];
+    this.contactList = [];
     this.viewBottom = -100;
     
+  }
+
+  bodyCount(){
+    return this.objects.length;
   }
 
   add(obj) {
@@ -46,6 +52,7 @@ export default class Scene {
         this.objects[i].update(dt, iterations);
       }
 
+      this.contactList = [];
       //collision step
       for (let i = 0; i < this.objects.length-1; i++) {
         const objectA = this.objects[i];
@@ -77,8 +84,15 @@ export default class Scene {
               objectB.translate(correction);
             }
 
-            this.resolveCollision(objectA, objectB, hit.normal, hit.depth);
+            let contact = new Manifold(objectA, objectB, hit.normal, hit.depth, Vec2.ZERO, Vec2.ZERO, 0);
+            this.contactList.push(contact);
+
+           
           }
+        }
+
+        for(let i = 0; i < this.contactList.length; i++){
+             this.resolveCollision(this.contactList[i]);
         }
       }
     }
@@ -104,7 +118,12 @@ export default class Scene {
    * @param {Vec2} normal  - collision normal pointing from A -> B
    * @param {number} depth - penetration depth (for positional correction)
    */
-  resolveCollision(bodyA, bodyB, normal, depth) {
+  resolveCollision(contact) {
+    const bodyA = contact.bodyA;
+    const bodyB = contact.bodyB;
+    const normal = contact.normal;
+    const depth = contact.depth;
+
     // relative velocity along the collision normal
     const relativeVelocity = bodyB.linearVel.subtract(bodyA.linearVel);
 

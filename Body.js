@@ -3,7 +3,7 @@ import bodyType from "./Rigidbody.js";
 import AABB from "./AABB.js";
 import { GRAVITATIONAL_STRENGTH } from "./PhysicsConstant.js";
 
-const PIXELS_PER_METER = 0.01;
+const PIXELS_PER_METER = 100;
 export default class Body {
   constructor(pos, linearVel, linearAcc, mass, bodyType) {
     this.pos = pos;
@@ -32,17 +32,17 @@ export default class Body {
   update(dt, iterations) {
     if (this.bodyType === bodyType.STATIC) return;
 
-    dt /= iterations;
-
     if (this.bodyType === bodyType.DYNAMIC) {
 
          // Apply gravity force
-    const gravityForce = new Vec2(0, -this.mass * GRAVITATIONAL_STRENGTH * 0.000001);
-      this.force = (gravityForce);
+      
+      const dtSeconds = (dt / 1000) / iterations;
+      
+      this.applyGravity();
       this.linearAcc = this.force.divide(this.mass);
-      this.linearVel = this.linearVel.add(this.linearAcc.multiply(dt));
-      this.pos = this.pos.add(this.linearVel.multiply(dt));
-      this.rotation = this.rotation + this.angularVel * dt;
+      this.linearVel = this.linearVel.add(this.linearAcc.multiply(dtSeconds));
+      this.pos = this.pos.add(this.linearVel.multiply(dtSeconds));
+      this.rotation = this.rotation + this.angularVel * dtSeconds;
 
       this.force = Vec2.ZERO;
       this.transformUpdateRequired = true;
@@ -69,7 +69,12 @@ export default class Body {
   }
 
   applyForce(force) {
-    this.force = force;
+    this.force = this.force.add(force);
+  }
+
+  applyGravity(){
+    const gravityForce = new Vec2(0, -this.mass * GRAVITATIONAL_STRENGTH*PIXELS_PER_METER);
+    this.applyForce(gravityForce);
   }
 
   getAABB(){}
