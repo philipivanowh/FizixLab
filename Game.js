@@ -74,8 +74,8 @@ function renderLoop() {
   let currentTime = Date.now();
   let deltaTime = (currentTime - lastTime) / 1000;
   renderer.clear();
+  scene.update(deltaTime);
   scene.draw(renderer);
-  scene.update(deltaTime,scene);
 
   lastTime = currentTime;
 

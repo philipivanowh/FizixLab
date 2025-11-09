@@ -1,11 +1,20 @@
+import PhysicsWorld from "./PhysicsWorld.js";
 
 export default class Scene {
-    constructor() {
+    constructor(iterations = 8) {
         this.objects = [];
+        this.physicsWorld = new PhysicsWorld();
+        this.iterations = iterations;
     }
 
     add(obj) {
         this.objects.push(obj);
+        if (obj.physicsBody) {
+            this.physicsWorld.addBody(obj.physicsBody);
+            if (typeof obj.syncFromPhysics === "function") {
+                obj.syncFromPhysics();
+            }
+        }
     }
 
     draw(renderer) {
@@ -15,8 +24,16 @@ export default class Scene {
     }
 
     update(dt) {
+        this.physicsWorld.step(dt, this.iterations);
+
         this.objects.forEach(object => {
-            object.update(dt,this);
+            if (typeof object.syncFromPhysics === "function") {
+                object.syncFromPhysics();
+            }
+
+            if (typeof object.update === "function") {
+                object.update(dt, this);
+            }
         });
     }
 }
