@@ -1,38 +1,36 @@
-import Vec2 from './Vec2.js';
+// collisions.js
+import Vec2 from "./Vec2.js";
+
+/* ---------- helpers ---------- */
 
 function projectVertices(vertices, axis) {
   let min = Number.POSITIVE_INFINITY;
   let max = Number.NEGATIVE_INFINITY;
 
-  vertices.forEach((v) => {
-    const projection = Vec2.dot(v, axis);
-    if (projection < min) {
-      min = projection;
-    }
-    if (projection > max) {
-      max = projection;
-    }
-  });
-
+  for (let i = 0; i < vertices.length; i++) {
+    const proj = Vec2.dot(vertices[i], axis);
+    if (proj < min) min = proj;
+    if (proj > max) max = proj;
+  }
   return { min, max };
 }
 
 function projectCircle(center, radius, axis) {
+  // Note: axis itself needn't be unit length, so we compute a unit direction for the endpoints,
+  // but still project onto the original (possibly non-unit) axis, just like the C#.
   const direction = axis.normalize();
-  const directionAndRadius = direction.multiply(radius);
+  const dirRad = direction.multiply(radius);
 
-  const p1 = center.add(directionAndRadius);
-  const p2 = center.subtract(directionAndRadius);
+  const p1 = center.add(dirRad);
+  const p2 = center.subtract(dirRad);
 
   let min = Vec2.dot(p1, axis);
   let max = Vec2.dot(p2, axis);
-
   if (min > max) {
-    const tmp = min;
+    const t = min;
     min = max;
-    max = tmp;
+    max = t;
   }
-
   return { min, max };
 }
 
@@ -40,33 +38,34 @@ function findClosestPointOnPolygon(circleCenter, vertices) {
   let result = -1;
   let minDistance = Number.POSITIVE_INFINITY;
 
-  vertices.forEach((v, index) => {
-    const distance = Vec2.distance(v, circleCenter);
-    if (distance < minDistance) {
-      minDistance = distance;
-      result = index;
+  for (let i = 0; i < vertices.length; i++) {
+    const v = vertices[i];
+    const d = Vec2.distance(v, circleCenter);
+    if (d < minDistance) {
+      minDistance = d;
+      result = i;
     }
-  });
-
+  }
   return result;
 }
 
 function findArithmeticMean(vertices) {
   let sumX = 0;
   let sumY = 0;
-
-  vertices.forEach((v) => {
-    sumX += v.x;
-    sumY += v.y;
-  });
-
+  for (let i = 0; i < vertices.length; i++) {
+    sumX += vertices[i].x;
+    sumY += vertices[i].y;
+  }
   return new Vec2(sumX / vertices.length, sumY / vertices.length);
 }
 
+/* ---------- circle vs polygon (with polygon center) ---------- */
 export function intersectCirclePolygon(circleCenter, circleRadius, polygonCenter, vertices) {
+  console.log(circleCenter);
   let normal = Vec2.ZERO;
   let depth = Number.POSITIVE_INFINITY;
 
+  // edges of polygon
   for (let i = 0; i < vertices.length; i++) {
     const va = vertices[i];
     const vb = vertices[(i + 1) % vertices.length];
@@ -74,42 +73,42 @@ export function intersectCirclePolygon(circleCenter, circleRadius, polygonCenter
     const edge = vb.subtract(va);
     let axis = new Vec2(-edge.y, edge.x).normalize();
 
-    const projectionA = projectVertices(vertices, axis);
-    const projectionB = projectCircle(circleCenter, circleRadius, axis);
+    const { min: minA, max: maxA } = projectVertices(vertices, axis);
+    const { min: minB, max: maxB } = projectCircle(circleCenter, circleRadius, axis);
 
-    if (projectionA.min >= projectionB.max || projectionB.min >= projectionA.max) {
+    if (minA >= maxB || minB >= maxA) {
       return { result: false };
     }
 
-    const axisDepth = Math.min(projectionB.max - projectionA.min, projectionA.max - projectionB.min);
-
+    const axisDepth = globalThis.Math.min(maxB - minA, maxA - minB);
     if (axisDepth < depth) {
       depth = axisDepth;
       normal = axis;
     }
   }
 
+  // closest polygon vertex to circle center
   const cpIndex = findClosestPointOnPolygon(circleCenter, vertices);
   const cp = vertices[cpIndex];
 
   let axis = cp.subtract(circleCenter).normalize();
 
-  const projectionA = projectVertices(vertices, axis);
-  const projectionB = projectCircle(circleCenter, circleRadius, axis);
+  {
+    const { min: minA, max: maxA } = projectVertices(vertices, axis);
+    const { min: minB, max: maxB } = projectCircle(circleCenter, circleRadius, axis);
 
-  if (projectionA.min >= projectionB.max || projectionB.min >= projectionA.max) {
-    return { result: false };
-  }
+    if (minA >= maxB || minB >= maxA) {
+      return { result: false };
+    }
 
-  const axisDepth = Math.min(projectionB.max - projectionA.min, projectionA.max - projectionB.min);
-
-  if (axisDepth < depth) {
-    depth = axisDepth;
-    normal = axis;
+    const axisDepth = globalThis.Math.min(maxB - minA, maxA - minB);
+    if (axisDepth < depth) {
+      depth = axisDepth;
+      normal = axis;
+    }
   }
 
   const direction = polygonCenter.subtract(circleCenter);
-
   if (Vec2.dot(direction, normal) < 0) {
     normal = normal.negate();
   }
@@ -117,10 +116,12 @@ export function intersectCirclePolygon(circleCenter, circleRadius, polygonCenter
   return { result: true, normal, depth };
 }
 
+/* ---------- circle vs polygon (no polygon center provided) ---------- */
 export function intersectCirclePolygonVerticesOnly(circleCenter, circleRadius, vertices) {
   let normal = Vec2.ZERO;
   let depth = Number.POSITIVE_INFINITY;
 
+  // edges of polygon
   for (let i = 0; i < vertices.length; i++) {
     const va = vertices[i];
     const vb = vertices[(i + 1) % vertices.length];
@@ -128,43 +129,44 @@ export function intersectCirclePolygonVerticesOnly(circleCenter, circleRadius, v
     const edge = vb.subtract(va);
     let axis = new Vec2(-edge.y, edge.x).normalize();
 
-    const projectionA = projectVertices(vertices, axis);
-    const projectionB = projectCircle(circleCenter, circleRadius, axis);
+    const { min: minA, max: maxA } = projectVertices(vertices, axis);
+    const { min: minB, max: maxB } = projectCircle(circleCenter, circleRadius, axis);
 
-    if (projectionA.min >= projectionB.max || projectionB.min >= projectionA.max) {
+    if (minA >= maxB || minB >= maxA) {
       return { result: false };
     }
 
-    const axisDepth = Math.min(projectionB.max - projectionA.min, projectionA.max - projectionB.min);
-
+    const axisDepth = globalThis.Math.min(maxB - minA, maxA - minB);
     if (axisDepth < depth) {
       depth = axisDepth;
       normal = axis;
     }
   }
 
+  // closest polygon vertex to circle center
   const cpIndex = findClosestPointOnPolygon(circleCenter, vertices);
   const cp = vertices[cpIndex];
 
   let axis = cp.subtract(circleCenter).normalize();
 
-  const projectionA = projectVertices(vertices, axis);
-  const projectionB = projectCircle(circleCenter, circleRadius, axis);
+  {
+    const { min: minA, max: maxA } = projectVertices(vertices, axis);
+    const { min: minB, max: maxB } = projectCircle(circleCenter, circleRadius, axis);
 
-  if (projectionA.min >= projectionB.max || projectionB.min >= projectionA.max) {
-    return { result: false };
+    if (minA >= maxB || minB >= maxA) {
+      return { result: false };
+    }
+
+    const axisDepth = globalThis.Math.min(maxB - minA, maxA - minB);
+    if (axisDepth < depth) {
+      depth = axisDepth;
+      normal = axis;
+    }
   }
 
-  const axisDepth = Math.min(projectionB.max - projectionA.min, projectionA.max - projectionB.min);
-
-  if (axisDepth < depth) {
-    depth = axisDepth;
-    normal = axis;
-  }
-
+  // compute polygon center from vertices
   const polygonCenter = findArithmeticMean(vertices);
   const direction = polygonCenter.subtract(circleCenter);
-
   if (Vec2.dot(direction, normal) < 0) {
     normal = normal.negate();
   }
@@ -172,46 +174,49 @@ export function intersectCirclePolygonVerticesOnly(circleCenter, circleRadius, v
   return { result: true, normal, depth };
 }
 
+/* ---------- polygon vs polygon (with centers) ---------- */
 export function intersectPolygons(centerA, verticesA, centerB, verticesB) {
   let normal = Vec2.ZERO;
   let depth = Number.POSITIVE_INFINITY;
 
+  // axes from A
   for (let i = 0; i < verticesA.length; i++) {
     const va = verticesA[i];
     const vb = verticesA[(i + 1) % verticesA.length];
+
     const edge = vb.subtract(va);
     const axis = new Vec2(-edge.y, edge.x).normalize();
 
-    const projectionA = projectVertices(verticesA, axis);
-    const projectionB = projectVertices(verticesB, axis);
+    const { min: minA, max: maxA } = projectVertices(verticesA, axis);
+    const { min: minB, max: maxB } = projectVertices(verticesB, axis);
 
-    if (projectionA.min >= projectionB.max || projectionB.min >= projectionA.max) {
+    if (minA >= maxB || minB >= maxA) {
       return { result: false };
     }
 
-    const axisDepth = Math.min(projectionB.max - projectionA.min, projectionA.max - projectionB.min);
-
+    const axisDepth = globalThis.Math.min(maxB - minA, maxA - minB);
     if (axisDepth < depth) {
       depth = axisDepth;
       normal = axis;
     }
   }
 
+  // axes from B
   for (let i = 0; i < verticesB.length; i++) {
     const va = verticesB[i];
     const vb = verticesB[(i + 1) % verticesB.length];
+
     const edge = vb.subtract(va);
     const axis = new Vec2(-edge.y, edge.x).normalize();
 
-    const projectionA = projectVertices(verticesA, axis);
-    const projectionB = projectVertices(verticesB, axis);
+    const { min: minA, max: maxA } = projectVertices(verticesA, axis);
+    const { min: minB, max: maxB } = projectVertices(verticesB, axis);
 
-    if (projectionA.min >= projectionB.max || projectionB.min >= projectionA.max) {
+    if (minA >= maxB || minB >= maxA) {
       return { result: false };
     }
 
-    const axisDepth = Math.min(projectionB.max - projectionA.min, projectionA.max - projectionB.min);
-
+    const axisDepth = globalThis.Math.min(maxB - minA, maxA - minB);
     if (axisDepth < depth) {
       depth = axisDepth;
       normal = axis;
@@ -219,7 +224,6 @@ export function intersectPolygons(centerA, verticesA, centerB, verticesB) {
   }
 
   const direction = centerB.subtract(centerA);
-
   if (Vec2.dot(direction, normal) < 0) {
     normal = normal.negate();
   }
@@ -227,46 +231,49 @@ export function intersectPolygons(centerA, verticesA, centerB, verticesB) {
   return { result: true, normal, depth };
 }
 
+/* ---------- polygon vs polygon (vertices only) ---------- */
 export function intersectPolygonsVerticesOnly(verticesA, verticesB) {
   let normal = Vec2.ZERO;
   let depth = Number.POSITIVE_INFINITY;
 
+  // axes from A
   for (let i = 0; i < verticesA.length; i++) {
     const va = verticesA[i];
     const vb = verticesA[(i + 1) % verticesA.length];
+
     const edge = vb.subtract(va);
     const axis = new Vec2(-edge.y, edge.x).normalize();
 
-    const projectionA = projectVertices(verticesA, axis);
-    const projectionB = projectVertices(verticesB, axis);
+    const { min: minA, max: maxA } = projectVertices(verticesA, axis);
+    const { min: minB, max: maxB } = projectVertices(verticesB, axis);
 
-    if (projectionA.min >= projectionB.max || projectionB.min >= projectionA.max) {
+    if (minA >= maxB || minB >= maxA) {
       return { result: false };
     }
 
-    const axisDepth = Math.min(projectionB.max - projectionA.min, projectionA.max - projectionB.min);
-
+    const axisDepth = globalThis.Math.min(maxB - minA, maxA - minB);
     if (axisDepth < depth) {
       depth = axisDepth;
       normal = axis;
     }
   }
 
+  // axes from B
   for (let i = 0; i < verticesB.length; i++) {
     const va = verticesB[i];
     const vb = verticesB[(i + 1) % verticesB.length];
+
     const edge = vb.subtract(va);
     const axis = new Vec2(-edge.y, edge.x).normalize();
 
-    const projectionA = projectVertices(verticesA, axis);
-    const projectionB = projectVertices(verticesB, axis);
+    const { min: minA, max: maxA } = projectVertices(verticesA, axis);
+    const { min: minB, max: maxB } = projectVertices(verticesB, axis);
 
-    if (projectionA.min >= projectionB.max || projectionB.min >= projectionA.max) {
+    if (minA >= maxB || minB >= maxA) {
       return { result: false };
     }
 
-    const axisDepth = Math.min(projectionB.max - projectionA.min, projectionA.max - projectionB.min);
-
+    const axisDepth = globalThis.Math.min(maxB - minA, maxA - minB);
     if (axisDepth < depth) {
       depth = axisDepth;
       normal = axis;
@@ -284,6 +291,7 @@ export function intersectPolygonsVerticesOnly(verticesA, verticesB) {
   return { result: true, normal, depth };
 }
 
+/* ---------- circle vs circle ---------- */
 export function intersectCircles(centerA, radiusA, centerB, radiusB) {
   const distance = Vec2.distance(centerA, centerB);
   const radii = radiusA + radiusB;

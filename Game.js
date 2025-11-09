@@ -12,26 +12,26 @@ const renderer = await createRenderer(canvas);
 const scene = new Scene();
 
 // Add boxes
-var boxPos = new Vec2(canvas.width/2, 50);
-var boxVel = new Vec2(-1,0);
+var boxPos = new Vec2(canvas.width/2, 200);
+var boxVel = new Vec2(0,0);
 var boxAcc = new Vec2(0,0);
 var box = new Box(boxPos,boxVel,boxAcc, 80, 80, [184, 92, 92, 1], 1, bodyType.DYNAMIC);
 
-var boxPos2 = new Vec2(canvas.width/2-300, 50);
-var boxVel2 = new Vec2(-1,0);
+var boxPos2 = new Vec2(canvas.width/2-300, 300);
+var boxVel2 = new Vec2(1,-0.1);
 var boxAcc2 = new Vec2(0,0);
 var box2 = new Box(boxPos2,boxVel2,boxAcc2, 80, 80, [184, 92, 92, 1], 1, bodyType.DYNAMIC);
 
-var groundPos = new Vec2(250, 700);
+var groundPos = new Vec2(850, 50);
 var groundVel = new Vec2(0,0);
 var groundAcc = new Vec2(0,0);
 var ground = new Box(groundPos, groundVel,groundAcc ,1600, 50, [255, 255, 255, 1], 1, bodyType.STATIC);
 
 
 // var ball1Pos = new Vec2(200, 100);
-// var ball1Vel = new Vec2(200,0);
+// var ball1Vel = new Vec2(0,0);
 // var ball1Acc = new Vec2(0,0);
-// var ball1 = new Ball(ball1Pos,ball1Vel,ball1Acc,20,[255, 200, 20, 1],1,bodyType.DYNAMIC);
+// var ball1 = new Ball(ball1Pos,ball1Vel,ball1Acc,50,[255, 200, 20, 1],1,bodyType.DYNAMIC);
 
 // var ball2Pos = new Vec2(400, 150);
 // var ball2Vel = new Vec2(100,0);
@@ -46,7 +46,7 @@ var ground = new Box(groundPos, groundVel,groundAcc ,1600, 50, [255, 255, 255, 1
 scene.add(box);
 scene.add(box2);
 scene.add(ground);
-// scene.add(ball1);
+//scene.add(ball1);
 // scene.add(ball2);
 // scene.add(ball3);
 
@@ -72,9 +72,9 @@ document.querySelector(".spawnBall").addEventListener("click", () => {
 var lastTime = Date.now();
 function renderLoop() {
   let currentTime = Date.now();
-  let deltaTime = (currentTime - lastTime) / 1000;
+  let deltaTime = (currentTime - lastTime);
   renderer.clear();
-  scene.update(deltaTime);
+  scene.update(deltaTime,20);
   scene.draw(renderer);
 
   lastTime = currentTime;

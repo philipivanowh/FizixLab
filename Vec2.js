@@ -1,11 +1,9 @@
 export default class Vec2 {
+  
+  static ZERO = new Vec2(0, 0);
   constructor(x, y) {
     this.x = x;
     this.y = y;
-  }
-
-  static get ZERO() {
-    return new Vec2(0, 0);
   }
 
   clone() {
@@ -25,6 +23,9 @@ export default class Vec2 {
   }
 
   divide(factor) {
+    if (factor === 0) 
+      throw new Error("Cannot divide by zero");
+    
     return new Vec2(this.x / factor, this.y / factor);
   }
 
