@@ -2,6 +2,7 @@
 import Ball from "./Ball.js";
 import Box from "./Box.js";
 
+const DEBUG_POINT_SIZE = 5.0;
 export default class Renderer {
   constructor(canvas, vertexShaderSource, fragmentShaderSource) {
     this.gl = canvas.getContext("webgl2");
@@ -30,6 +31,10 @@ export default class Renderer {
     this.translationUniformLocation = this.gl.getUniformLocation(
       this.program,
       "u_translation"
+    );
+    this.pointSizeUniformLocation = this.gl.getUniformLocation(
+      this.program,
+      "u_pointSize"
     );
 
     this.gl.bindVertexArray(this.vao);
@@ -106,6 +111,7 @@ export default class Renderer {
     const [r, g, b] = ball.color;
     const color = this.normalizeColor(r, g, b);
     gl.uniform4f(this.colorUniformLocation, color[0], color[1], color[2], color[3]);
+    gl.uniform1f(this.pointSizeUniformLocation, 1.0);
     gl.bindVertexArray(this.vao);
 
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(ball.getBall()), gl.DYNAMIC_DRAW);
@@ -113,28 +119,16 @@ export default class Renderer {
     gl.drawArrays(gl.TRIANGLES, 0, ball.verticesSize);
   }
 
-  getDebugPoint(pos){
-    const size = 1;
-    return [
-      0,0,
-      0,size,
-      size,size,
-      size,size,
-      size,0,
-      0,0
-    ];
-  }
-
   drawDebugPoint(pos){
     const gl = this.gl;
-    const [r, g, b] = [255, 255, 255];
+    const [r, g, b] = [100, 200, 255];
     const color = this.normalizeColor(r, g, b);
     gl.uniform4f(this.colorUniformLocation, color[0], color[1], color[2], color[3]);
+    gl.uniform1f(this.pointSizeUniformLocation, 10);
     gl.bindVertexArray(this.vao);
-
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.getDebugPoint()), gl.DYNAMIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0, 0]), gl.DYNAMIC_DRAW);
     gl.uniform2f(this.translationUniformLocation, pos.x, pos.y);
-    gl.drawArrays(gl.TRIANGLES, 0, 6);
+    gl.drawArrays(gl.POINTS, 0, 1);
   }
 
   drawBox(box) {
@@ -142,6 +136,7 @@ export default class Renderer {
     const [r, g, b] = box.color;
     const color = this.normalizeColor(r, g, b);
     gl.uniform4f(this.colorUniformLocation, color[0], color[1], color[2], color[3]);
+    gl.uniform1f(this.pointSizeUniformLocation, 1.0);
     gl.bindVertexArray(this.vao);
 
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(box.getRect()), gl.DYNAMIC_DRAW);

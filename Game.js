@@ -5,8 +5,6 @@ import bodyType from "./Rigidbody.js";
 import Ball from "./Ball.js";
 import Vec2 from "./Vec2.js";
 
-
-
 const canvas = document.querySelector("#c");
 const renderer = await createRenderer(canvas);
 const scene = new Scene();
@@ -27,6 +25,36 @@ var groundVel = new Vec2(0,0);
 var groundAcc = new Vec2(0,0);
 var ground = new Box(groundPos, groundVel,groundAcc ,1600, 50, [255, 255, 255, 1], 1, bodyType.STATIC);
 
+const slopeAngle = -Math.PI / 6;
+const slopePos = new Vec2(1000, 250);
+const slope = new Box(
+  slopePos,
+  new Vec2(0, 0),
+  new Vec2(0, 0),
+  500,
+  40,
+  [200, 200, 200, 1],
+  1,
+  bodyType.STATIC
+);
+slope.rotateTo(slopeAngle);
+
+const inclineBoxPos = slopePos.add(
+  new Vec2(
+    Math.cos(slopeAngle) * -120,
+    Math.sin(slopeAngle) * -120 + 60
+  )
+);
+const inclineBox = new Box(
+  inclineBoxPos,
+  new Vec2(0, 0),
+  new Vec2(0, 0),
+  70,
+  70,
+  [80, 160, 255, 1],
+  5,
+  bodyType.DYNAMIC
+);
 
 var ball1Pos = new Vec2(200, 400);
 var ball1Vel = new Vec2(0,0);
@@ -47,6 +75,8 @@ var ball2 = new Ball(ball2Pos,ball2Vel,ball2Acc,50,[100, 200, 20, 1],5,bodyType.
 scene.add(box);
 scene.add(box2);
 scene.add(ground);
+scene.add(slope);
+scene.add(inclineBox);
 scene.add(ball1);
  scene.add(ball2);
 // scene.add(ball3);
@@ -75,18 +105,9 @@ function renderLoop() {
   let currentTime = Date.now();
   let deltaTime = (currentTime - lastTime);
 
-  console.groupCollapsed("Frame");
-  console.log("DeltaTime" + deltaTime/1000);
-  console.log("Body Count" + scene.bodyCount());
-  console.groupEnd();
   renderer.clear();
   scene.update(deltaTime,20);
   scene.draw(renderer);
-
-  let contactPoints = scene.contactPointsList;
-  for(let i = 0; i < contactPoints.length; i++){
-    renderer.drawDebugPoint(contactPoints[i]);
-  }
 
   lastTime = currentTime;
 

@@ -15,6 +15,18 @@ const MAX_DENSITY = 21.4;
 const MIN_BODY_SIZE = 0.01 * 0.01;
 const MAX_BODY_SIZE = 64 * 64;
 
+const CONTACT_EPSILON = 1e-4;
+
+function containsContactPoint(list, candidate, epsilon = CONTACT_EPSILON) {
+  if (!candidate) return false;
+
+  return list.some(
+    (point) =>
+      globalThis.Math.abs(point.x - candidate.x) <= epsilon &&
+      globalThis.Math.abs(point.y - candidate.y) <= epsilon
+  );
+}
+
 export default class Scene {
   constructor() {
     this.objects = [];
@@ -35,6 +47,13 @@ export default class Scene {
     this.objects.forEach((object) => {
       renderer.drawShape(object);
     });
+
+    // Draw debug contact points if renderer supports it
+    
+    for (let i = 0; i < this.contactPointsList.length; i++) {
+      renderer.drawDebugPoint(this.contactPointsList[i]);
+    }
+    
   }
 
   update(dt, iterations) {
@@ -49,47 +68,50 @@ export default class Scene {
       }
 
       this.contactList = [];
-      //collision step
+
+      // Collision step
       for (let i = 0; i < this.objects.length - 1; i++) {
         const objectA = this.objects[i];
         const objectA_aabb = objectA.getAABB();
 
-        //update the movement
-
-        //update the collision with other objects
         for (let j = i + 1; j < this.objects.length; j++) {
           const objectB = this.objects[j];
           const objectB_aabb = objectB.getAABB();
 
-          //Skip if both objects are static
+          // Skip if both objects are static
           if (
             objectA.bodyType === bodyType.STATIC &&
             objectB.bodyType === bodyType.STATIC
-          )
+          ) {
             continue;
+          }
 
-          //perform a collision detection before heavy collision detection
+          // Broad phase
           if (!intersectAABBs(objectA_aabb, objectB_aabb)) continue;
 
-          //detect every collision between the two objects
-          let hit = collide(objectA, objectB);
-          if (hit.result) {
-            //penetration resolution
-            if (objectA.bodyType == bodyType.STATIC)
-              objectB.translate(hit.normal.multiply(hit.depth));
-            else if (objectB.bodyType == bodyType.STATIC)
-              objectA.translate(hit.normal.multiply(-hit.depth));
-            else {
-              const correction = hit.normal.multiply(hit.depth / 2);
-              objectA.translate(correction.negate());
-              objectB.translate(correction);
-            }
+          const hit = collide(objectA, objectB);
+          if (!hit.result) {
+            continue;
+          }
 
-            let [contact1, contact2, contactCount] = findContactPoints(
-              objectA,
-              objectB
-            );
-            let contact = new Manifold(
+          // Penetration resolution
+          if (objectA.bodyType === bodyType.STATIC) {
+            objectB.translate(hit.normal.multiply(hit.depth));
+          } else if (objectB.bodyType === bodyType.STATIC) {
+            objectA.translate(hit.normal.multiply(-hit.depth));
+          } else {
+            const correction = hit.normal.multiply(hit.depth / 2);
+            objectA.translate(correction.negate());
+            objectB.translate(correction);
+          }
+
+          const [contact1, contact2, contactCount] = findContactPoints(
+            objectA,
+            objectB
+          );
+
+          this.contactList.push(
+            new Manifold(
               objectA,
               objectB,
               hit.normal,
@@ -97,27 +119,26 @@ export default class Scene {
               contact1,
               contact2,
               contactCount
-            );
-            this.contactList.push(contact);
-          }
+            )
+          );
         }
+      }
 
-        //resolve the collision and store the contact points
-        for (let i = 0; i < this.contactList.length; i++) {
-          this.resolveCollision(this.contactList[i]);
+      // Resolve and record contact points once per iteration (C# parity)
+      for (let c = 0; c < this.contactList.length; c++) {
+        const contact = this.contactList[c];
+        this.resolveCollision(contact);
 
-          //add the contact points to the list
-          if (this.contactList[i].contactCount > 0) {
-            if (!this.contactPointsList.includes(contactList[i].contact1)) {
-              this.contactPointsList.push(this.contactList[i].contact1);
-            }
+        if (contact.contactCount > 0) {
+          if (!containsContactPoint(this.contactPointsList, contact.contact1)) {
+            this.contactPointsList.push(contact.contact1);
+          }
 
-            //If there is a second contact point, add it to the list
-            if (this.contactList[i].contactCount > 1) {
-              if (!this.contactPointsList.includes(contactList[i].contact2)) {
-                this.contactPointsList.push(this.contactList[i].contact2);
-              }
-            }
+          if (
+            contact.contactCount > 1 &&
+            !containsContactPoint(this.contactPointsList, contact.contact2)
+          ) {
+            this.contactPointsList.push(contact.contact2);
           }
         }
       }

@@ -24,6 +24,8 @@ export default class Ball extends Body {
 
     this.vertices = this.generateVertices(); // use consistent name
     this.verticesSize = this.vertices.length; // number of floats (x,y per vertex)
+
+    this.updateMassProperties();
   }
 
   // LOCAL-SPACE triangles (center is at 0,0 — shader adds translation)
@@ -83,5 +85,10 @@ export default class Ball extends Body {
     }
     this.aabbUpdateRequired = true;
     return this.aabb;
+  }
+
+  computeInertia(){
+    if (this.mass <= 0) return 0;
+    return 0.5 * this.mass * this.radius * this.radius;
   }
 }

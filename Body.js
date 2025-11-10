@@ -13,8 +13,11 @@ export default class Body {
     this.rotation = 0;
     this.angularVel = 0;
     this.angularAcc = 0;
-    this.restitution = 0.5;
+    this.restitution = .5;
     this.force = Vec2.ZERO;
+    this.area = 1;
+    this.inertia = 0;
+    this.invInertia = 0;
 
     this.density = 1;
     this.mass = mass || 1;
@@ -28,6 +31,20 @@ export default class Body {
     }else{
       this.invMass = 0;
     }
+    // Subclasses should call updateMassProperties() once their geometry props are set.
+  }
+
+  updateMassProperties() {
+    this.inertia = this.computeInertia();
+    if (this.bodyType === bodyType.STATIC || this.inertia === 0) {
+      this.invInertia = 0;
+    } else {
+      this.invInertia = 1 / this.inertia;
+    }
+  }
+
+  computeInertia() {
+    return 0;
   }
   update(dt, iterations) {
     if (this.bodyType === bodyType.STATIC) return;
@@ -58,6 +75,12 @@ export default class Body {
 
   translateTo(pos){
     this.pos = pos;
+    this.transformUpdateRequired = true;
+    this.aabbUpdateRequired = true;
+  }
+
+  rotateTo(angle) {
+    this.rotation = angle;
     this.transformUpdateRequired = true;
     this.aabbUpdateRequired = true;
   }

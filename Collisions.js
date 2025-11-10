@@ -5,29 +5,39 @@ import Box from "./Box.js";
 
 /* ---------- helpers ---------- */
 
-function PointSegmentDistance(p, a, b){
+const EPSILON = 1e-5;
 
-  let ab = b.subtract(a);
-  let ap = p.subtract(a);
+function nearlyEqual(a, b, epsilon = EPSILON) {
+  return Math.abs(a - b) <= epsilon;
+}
 
-  let proj = Vec2.dot(ap, ab); 
-  let abLenSq = ab.lengthSquared();
-  let d = proj / abLenSq;
+function nearlyEqualVec(a, b, epsilon = EPSILON) {
+  if (!a || !b) return false;
+  return nearlyEqual(a.x, b.x, epsilon) && nearlyEqual(a.y, b.y, epsilon);
+}
+
+function PointSegmentDistance(p, a, b) {
+  const ab = b.subtract(a);
+  const ap = p.subtract(a);
+
+  const abLenSq = ab.lengthSquared();
+  const proj = abLenSq === 0 ? 0 : Vec2.dot(ap, ab);
+  const d = abLenSq === 0 ? 0 : proj / abLenSq;
   let cp = Vec2.ZERO;
-  let distanceSquared = 0;
 
-  if(d <= 0){
+  if (d <= 0) {
     cp = a;
-  }else if(d >= 1){
+  } else if (d >= 1) {
     cp = b;
-  }else{
+  } else {
     cp = a.add(ab.multiply(d));
   }
 
-  distanceSquared = Vec2.distanceSquared(p, cp);
+  const dx = p.x - cp.x;
+  const dy = p.y - cp.y;
+  const distanceSquared = dx * dx + dy * dy;
 
-  return [distanceSquared,cp];
-
+  return [distanceSquared, cp];
 }
 function projectVertices(vertices, axis) {
   let min = Number.POSITIVE_INFINITY;
@@ -101,12 +111,20 @@ export function findContactPoints(objectA, objectB) {
 
   if (objectA instanceof Box) {
     if (objectB instanceof Box) {
-     
+      return findContactPointsFromPolygons(
+        objectA.getVertexWorldPos(),
+        objectB.getVertexWorldPos()
+      );
     }
 
     // Box vs Ball  (invert normal after circle-vs-poly to match A->B direction)
     else if (objectB instanceof Ball) {
-      contact1 =findCirclePolygonContactPoint(objectB.pos, objectB.radius, objectA.pos, objectA.getVertexWorldPos());
+      contact1 = findCirclePolygonContactPoint(
+        objectB.pos,
+        objectB.radius,
+        objectA.pos,
+        objectA.getVertexWorldPos()
+      );
       contactCount = 1;
     }
   }
@@ -114,13 +132,22 @@ export function findContactPoints(objectA, objectB) {
   // Ball vs ...
   else if (objectA instanceof Ball) {
     if (objectB instanceof Box) {
-       contact1 =findCirclePolygonContactPoint(objectA.pos, objectA.radius, objectB.pos, objectB.getVertexWorldPos());
+      contact1 = findCirclePolygonContactPoint(
+        objectA.pos,
+        objectA.radius,
+        objectB.pos,
+        objectB.getVertexWorldPos()
+      );
       contactCount = 1;
     }
 
     else if (objectB instanceof Ball) {
       //there can only be one contact point between cirlce
-      contact1 = findCircleCircleContactPoint(objectA.pos, objectA.radius, objectB.pos);
+      contact1 = findCircleCircleContactPoint(
+        objectA.pos,
+        objectA.radius,
+        objectB.pos
+      );
       contactCount = 1;
     }
   }
@@ -128,16 +155,63 @@ export function findContactPoints(objectA, objectB) {
   return [contact1, contact2, contactCount];
 }
 
-function findCirclePolygonContactPoint(centerA,centerRadius,polygonCenterB,polygonVerticiesB){
+function findContactPointsFromPolygons(verticesA, verticesB) {
+  let contact1 = Vec2.ZERO;
+  let contact2 = Vec2.ZERO;
+  let contactCount = 0;
+  let minDistSq = Number.POSITIVE_INFINITY;
+
+  const tryUpdateContacts = (point, va, vb) => {
+    const [distSq, cp] = PointSegmentDistance(point, va, vb);
+
+    if (nearlyEqual(distSq, minDistSq)) {
+      if (!nearlyEqualVec(cp, contact1) && !nearlyEqualVec(cp, contact2)) {
+        contact2 = cp;
+        contactCount = 2;
+      }
+    } else if (distSq < minDistSq) {
+      minDistSq = distSq;
+      contact1 = cp;
+      contactCount = 1;
+    }
+  };
+
+  for (let i = 0; i < verticesA.length; i++) {
+    const p = verticesA[i];
+    for (let j = 0; j < verticesB.length; j++) {
+      const va = verticesB[j];
+      const vb = verticesB[(j + 1) % verticesB.length];
+      tryUpdateContacts(p, va, vb);
+    }
+  }
+
+  for (let i = 0; i < verticesB.length; i++) {
+    const p = verticesB[i];
+    for (let j = 0; j < verticesA.length; j++) {
+      const va = verticesA[j];
+      const vb = verticesA[(j + 1) % verticesA.length];
+      tryUpdateContacts(p, va, vb);
+    }
+  }
+
+  return [contact1, contact2, contactCount];
+}
+
+function findCirclePolygonContactPoint(
+  circleCenter,
+  _circleRadius,
+  _polygonCenter,
+  polygonVertices
+) {
 
   let minDistSq = Number.POSITIVE_INFINITY;
   let cp = Vec2.ZERO;
 
-  for(let i = 0; i < polygonVerticiesB.length; i++){
-    let va = polygonVerticiesB[i];
-    let vb = polygonVerticiesB[(i + 1) % polygonVerticiesB.length];
+  for(let i = 0; i < polygonVertices.length; i++){
+    let va = polygonVertices[i];
+    let vb = polygonVertices[(i + 1) % polygonVertices.length];
 
-    let [distSq, contact] = this.PointSegmentDistance(centerA,va,vb);
+    let [distSq, contact] = PointSegmentDistance(circleCenter,va,vb);
 
     if(distSq < minDistSq){
       minDistSq = distSq;
