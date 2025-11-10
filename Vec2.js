@@ -37,6 +37,14 @@ export default class Vec2 {
     return Math.sqrt(this.x * this.x + this.y * this.y);
   }
 
+  lengthSquared(){
+    return this.x * this.x + this.y * this.y;
+  }
+
+  distanceSquared(a,b){
+    return (a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y);
+  }
+
   normalize() {
     const len = this.length();
     if (len === 0) {

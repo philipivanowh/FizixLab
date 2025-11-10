@@ -14,11 +14,11 @@ const scene = new Scene();
 // Add boxes
 var boxPos = new Vec2(canvas.width/2+500, 200);
 var boxVel = new Vec2(0,0);
-var boxAcc = new Vec2(0,0);
+var boxAcc = new Vec2(-10,0);
 var box = new Box(boxPos,boxVel,boxAcc, 80, 80, [184, 92, 92, 1], 100, bodyType.DYNAMIC);
 
 var boxPos2 = new Vec2(100, 600);
-var boxVel2 = new Vec2(1,0);
+var boxVel2 = new Vec2(10,0);
 var boxAcc2 = new Vec2(0,0);
 var box2 = new Box(boxPos2,boxVel2,boxAcc2, 80, 80, [184, 92, 92, 1], 1, bodyType.DYNAMIC);
 
@@ -33,10 +33,11 @@ var ball1Vel = new Vec2(0,0);
 var ball1Acc = new Vec2(0,0);
 var ball1 = new Ball(ball1Pos,ball1Vel,ball1Acc,50,[255, 200, 20, 1],5,bodyType.DYNAMIC);
 
-// var ball2Pos = new Vec2(400, 150);
-// var ball2Vel = new Vec2(100,0);
-// var ball2Acc = new Vec2(0,0);
-// var ball2 = new Ball(ball2Pos,ball2Vel,ball2Acc,50,[100, 200, 20, 1],1,bodyType.DYNAMIC);
+
+var ball2Pos = new Vec2(400, 750);
+var ball2Vel = new Vec2(0,5);
+var ball2Acc = new Vec2(0,0);
+var ball2 = new Ball(ball2Pos,ball2Vel,ball2Acc,50,[100, 200, 20, 1],5,bodyType.DYNAMIC);
 
 
 // var ball3Pos = new Vec2(1000, 150);
@@ -47,7 +48,7 @@ scene.add(box);
 scene.add(box2);
 scene.add(ground);
 scene.add(ball1);
-// scene.add(ball2);
+ scene.add(ball2);
 // scene.add(ball3);
 
 document.querySelector(".spawnBox").addEventListener("click", () => {
@@ -81,6 +82,11 @@ function renderLoop() {
   renderer.clear();
   scene.update(deltaTime,20);
   scene.draw(renderer);
+
+  let contactPoints = scene.contactPointsList;
+  for(let i = 0; i < contactPoints.length; i++){
+    renderer.drawDebugPoint(contactPoints[i]);
+  }
 
   lastTime = currentTime;
 

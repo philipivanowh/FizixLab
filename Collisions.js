@@ -1,8 +1,34 @@
 // collisions.js
 import Vec2 from "./Vec2.js";
+import Ball from "./Ball.js";
+import Box from "./Box.js";
 
 /* ---------- helpers ---------- */
 
+function PointSegmentDistance(p, a, b){
+
+  let ab = b.subtract(a);
+  let ap = p.subtract(a);
+
+  let proj = Vec2.dot(ap, ab); 
+  let abLenSq = ab.lengthSquared();
+  let d = proj / abLenSq;
+  let cp = Vec2.ZERO;
+  let distanceSquared = 0;
+
+  if(d <= 0){
+    cp = a;
+  }else if(d >= 1){
+    cp = b;
+  }else{
+    cp = a.add(ab.multiply(d));
+  }
+
+  distanceSquared = Vec2.distanceSquared(p, cp);
+
+  return [distanceSquared,cp];
+
+}
 function projectVertices(vertices, axis) {
   let min = Number.POSITIVE_INFINITY;
   let max = Number.NEGATIVE_INFINITY;
@@ -59,8 +85,149 @@ function findArithmeticMean(vertices) {
   return new Vec2(sumX / vertices.length, sumY / vertices.length);
 }
 
+export function intersectAABBs(a, b) {
+  if(a.max.x <= b.min.x || b.max.x <= a.min.x || a.max.y <= b.min.y || b.max.y <= a.min.y)
+    return false;
+
+  return true;
+}
+/* help find contact point */
+
+export function findContactPoints(objectA, objectB) {
+
+  let contact1 = Vec2.ZERO;
+  let contact2 = Vec2.ZERO;
+  let contactCount = 0;
+
+  if (objectA instanceof Box) {
+    if (objectB instanceof Box) {
+     
+    }
+
+    // Box vs Ball  (invert normal after circle-vs-poly to match A->B direction)
+    else if (objectB instanceof Ball) {
+      contact1 =findCirclePolygonContactPoint(objectB.pos, objectB.radius, objectA.pos, objectA.getVertexWorldPos());
+      contactCount = 1;
+    }
+  }
+
+  // Ball vs ...
+  else if (objectA instanceof Ball) {
+    if (objectB instanceof Box) {
+       contact1 =findCirclePolygonContactPoint(objectA.pos, objectA.radius, objectB.pos, objectB.getVertexWorldPos());
+      contactCount = 1;
+    }
+
+    else if (objectB instanceof Ball) {
+      //there can only be one contact point between cirlce
+      contact1 = findCircleCircleContactPoint(objectA.pos, objectA.radius, objectB.pos);
+      contactCount = 1;
+    }
+  }
+
+  return [contact1, contact2, contactCount];
+}
+
+function findCirclePolygonContactPoint(centerA,centerRadius,polygonCenterB,polygonVerticiesB){
+
+  let minDistSq = Number.POSITIVE_INFINITY;
+  let cp = Vec2.ZERO;
+
+  for(let i = 0; i < polygonVerticiesB.length; i++){
+    let va = polygonVerticiesB[i];
+    let vb = polygonVerticiesB[(i + 1) % polygonVerticiesB.length];
+
+    let [distSq, contact] = this.PointSegmentDistance(centerA,va,vb);
+
+    if(distSq < minDistSq){
+      minDistSq = distSq;
+      cp = contact;
+    }
+  }
+  return cp;
+}
+
+ function findCircleCircleContactPoint(centerA, radiusA, centerB) {
+  let ab = centerB.subtract(centerA);
+  let dir = ab.normalize();
+  let cp = centerA.add(dir.multiply(radiusA));
+  return cp;
+}
+
+export function collide(objectA, objectB) {
+  // Prefer a definite zero vector to avoid Vec2.ZERO / ZERO() inconsistencies
+  let normal = new Vec2(0, 0);
+  let depth = 0;
+
+  // Box vs Box
+  if (objectA instanceof Box) {
+    if (objectB instanceof Box) {
+      const vertsA = objectA.getVertexWorldPos();
+      const vertsB = objectB.getVertexWorldPos();
+
+      const hit = intersectPolygons(objectA.pos, vertsA, objectB.pos, vertsB);
+      if (!hit.result) return { result: false };
+      normal = hit.normal;
+      depth = hit.depth;
+      return { result: true, normal, depth };
+    }
+
+    // Box vs Ball  (invert normal after circle-vs-poly to match A->B direction)
+    if (objectB instanceof Ball) {
+      const vertsA = objectA.getVertexWorldPos();
+      const hit = intersectCirclePolygon(
+        objectB.pos,
+        objectB.radius,
+        objectA.pos,
+        vertsA
+      );
+      if (!hit.result) return { result: false };
+      normal = hit.normal.negate(); // make normal point from A(Box) -> B(Ball)
+      depth = hit.depth;
+      return { result: true, normal, depth };
+    }
+  }
+
+  // Ball vs ...
+  if (objectA instanceof Ball) {
+    if (objectB instanceof Box) {
+      const vertsB = objectB.getVertexWorldPos();
+      const hit = intersectCirclePolygon(
+        objectA.pos,
+        objectA.radius,
+        objectB.pos,
+        vertsB
+      );
+      if (!hit.result) return { result: false };
+      normal = hit.normal; // already A(Ball) -> B(Box)
+      depth = hit.depth;
+      return { result: true, normal, depth };
+    }
+
+    if (objectB instanceof Ball) {
+      const hit = intersectCircles(
+        objectA.pos,
+        objectA.radius,
+        objectB.pos,
+        objectB.radius
+      );
+      if (!hit.result) return { result: false };
+      normal = hit.normal; // A -> B
+      depth = hit.depth;
+      return { result: true, normal, depth };
+    }
+  }
+
+  return { result: false };
+}
+
 /* ---------- circle vs polygon (with polygon center) ---------- */
-export function intersectCirclePolygon(circleCenter, circleRadius, polygonCenter, vertices) {
+export function intersectCirclePolygon(
+  circleCenter,
+  circleRadius,
+  polygonCenter,
+  vertices
+) {
   let normal = Vec2.ZERO;
   let depth = Number.POSITIVE_INFINITY;
 
@@ -73,7 +240,11 @@ export function intersectCirclePolygon(circleCenter, circleRadius, polygonCenter
     let axis = new Vec2(-edge.y, edge.x).normalize();
 
     const { min: minA, max: maxA } = projectVertices(vertices, axis);
-    const { min: minB, max: maxB } = projectCircle(circleCenter, circleRadius, axis);
+    const { min: minB, max: maxB } = projectCircle(
+      circleCenter,
+      circleRadius,
+      axis
+    );
 
     if (minA >= maxB || minB >= maxA) {
       return { result: false };
@@ -94,7 +265,11 @@ export function intersectCirclePolygon(circleCenter, circleRadius, polygonCenter
 
   {
     const { min: minA, max: maxA } = projectVertices(vertices, axis);
-    const { min: minB, max: maxB } = projectCircle(circleCenter, circleRadius, axis);
+    const { min: minB, max: maxB } = projectCircle(
+      circleCenter,
+      circleRadius,
+      axis
+    );
 
     if (minA >= maxB || minB >= maxA) {
       return { result: false };
@@ -116,7 +291,11 @@ export function intersectCirclePolygon(circleCenter, circleRadius, polygonCenter
 }
 
 /* ---------- circle vs polygon (no polygon center provided) ---------- */
-export function intersectCirclePolygonVerticesOnly(circleCenter, circleRadius, vertices) {
+export function intersectCirclePolygonVerticesOnly(
+  circleCenter,
+  circleRadius,
+  vertices
+) {
   let normal = Vec2.ZERO;
   let depth = Number.POSITIVE_INFINITY;
 
@@ -129,7 +308,11 @@ export function intersectCirclePolygonVerticesOnly(circleCenter, circleRadius, v
     let axis = new Vec2(-edge.y, edge.x).normalize();
 
     const { min: minA, max: maxA } = projectVertices(vertices, axis);
-    const { min: minB, max: maxB } = projectCircle(circleCenter, circleRadius, axis);
+    const { min: minB, max: maxB } = projectCircle(
+      circleCenter,
+      circleRadius,
+      axis
+    );
 
     if (minA >= maxB || minB >= maxA) {
       return { result: false };
@@ -150,7 +333,11 @@ export function intersectCirclePolygonVerticesOnly(circleCenter, circleRadius, v
 
   {
     const { min: minA, max: maxA } = projectVertices(vertices, axis);
-    const { min: minB, max: maxB } = projectCircle(circleCenter, circleRadius, axis);
+    const { min: minB, max: maxB } = projectCircle(
+      circleCenter,
+      circleRadius,
+      axis
+    );
 
     if (minA >= maxB || minB >= maxA) {
       return { result: false };

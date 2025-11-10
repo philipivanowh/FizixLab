@@ -1,8 +1,4 @@
-import {
-  intersectPolygons,
-  intersectCirclePolygon,
-  intersectCircles,
-} from "./Collisions.js"; // <- your SAT file
+import { findContactPoints, intersectAABBs, collide } from "./Collisions.js"; // <- your SAT file
 import Ball from "./Ball.js";
 import Box from "./Box.js";
 import Vec2 from "./Vec2.js";
@@ -17,18 +13,17 @@ const MIN_DENSITY = 0.5;
 const MAX_DENSITY = 21.4;
 
 const MIN_BODY_SIZE = 0.01 * 0.01;
-const MAX_BODY_SIZE = 64*64;
-
+const MAX_BODY_SIZE = 64 * 64;
 
 export default class Scene {
   constructor() {
     this.objects = [];
     this.contactList = [];
+    this.contactPointsList = [];
     this.viewBottom = -100;
-    
   }
 
-  bodyCount(){
+  bodyCount() {
     return this.objects.length;
   }
 
@@ -45,8 +40,9 @@ export default class Scene {
   update(dt, iterations) {
     iterations = Math.clamp(iterations, MIN_ITERATIONS, MAX_ITERATIONS);
 
+    this.contactPointsList = [];
+
     for (let it = 0; it < iterations; it++) {
-      
       // Movement step
       for (let i = 0; i < this.objects.length; i++) {
         this.objects[i].update(dt, iterations);
@@ -54,14 +50,16 @@ export default class Scene {
 
       this.contactList = [];
       //collision step
-      for (let i = 0; i < this.objects.length-1; i++) {
+      for (let i = 0; i < this.objects.length - 1; i++) {
         const objectA = this.objects[i];
+        const objectA_aabb = objectA.getAABB();
 
         //update the movement
 
         //update the collision with other objects
         for (let j = i + 1; j < this.objects.length; j++) {
           const objectB = this.objects[j];
+          const objectB_aabb = objectB.getAABB();
 
           //Skip if both objects are static
           if (
@@ -70,29 +68,57 @@ export default class Scene {
           )
             continue;
 
+          //perform a collision detection before heavy collision detection
+          if (!intersectAABBs(objectA_aabb, objectB_aabb)) continue;
+
           //detect every collision between the two objects
-          let hit = this.collide(objectA, objectB);
+          let hit = collide(objectA, objectB);
           if (hit.result) {
             //penetration resolution
             if (objectA.bodyType == bodyType.STATIC)
-             objectB.translate(hit.normal.multiply(hit.depth));
+              objectB.translate(hit.normal.multiply(hit.depth));
             else if (objectB.bodyType == bodyType.STATIC)
               objectA.translate(hit.normal.multiply(-hit.depth));
             else {
-                const correction = hit.normal.multiply(hit.depth/2);
+              const correction = hit.normal.multiply(hit.depth / 2);
               objectA.translate(correction.negate());
               objectB.translate(correction);
             }
 
-            let contact = new Manifold(objectA, objectB, hit.normal, hit.depth, Vec2.ZERO, Vec2.ZERO, 0);
+            let [contact1, contact2, contactCount] = findContactPoints(
+              objectA,
+              objectB
+            );
+            let contact = new Manifold(
+              objectA,
+              objectB,
+              hit.normal,
+              hit.depth,
+              contact1,
+              contact2,
+              contactCount
+            );
             this.contactList.push(contact);
-
-           
           }
         }
 
-        for(let i = 0; i < this.contactList.length; i++){
-             this.resolveCollision(this.contactList[i]);
+        //resolve the collision and store the contact points
+        for (let i = 0; i < this.contactList.length; i++) {
+          this.resolveCollision(this.contactList[i]);
+
+          //add the contact points to the list
+          if (this.contactList[i].contactCount > 0) {
+            if (!this.contactPointsList.includes(contactList[i].contact1)) {
+              this.contactPointsList.push(this.contactList[i].contact1);
+            }
+
+            //If there is a second contact point, add it to the list
+            if (this.contactList[i].contactCount > 1) {
+              if (!this.contactPointsList.includes(contactList[i].contact2)) {
+                this.contactPointsList.push(this.contactList[i].contact2);
+              }
+            }
+          }
         }
       }
     }
@@ -102,12 +128,12 @@ export default class Scene {
   }
 
   removeObjects() {
-    for(let i = 0; i < this.objects.length; i++){
-        let box = this.objects[i].getAABB();
+    for (let i = 0; i < this.objects.length; i++) {
+      let box = this.objects[i].getAABB();
 
-        if(box.max.y < this.viewBottom){
-            this.objects.splice(i,1);
-        }
+      if (box.max.y < this.viewBottom) {
+        this.objects.splice(i, 1);
+      }
     }
   }
 
@@ -140,80 +166,7 @@ export default class Scene {
     const impulse = normal.multiply(j);
 
     // apply linear impulse
-    bodyA.linearVel = bodyA.linearVel.subtract(
-      impulse.multiply(bodyA.invMass)
-    );
+    bodyA.linearVel = bodyA.linearVel.subtract(impulse.multiply(bodyA.invMass));
     bodyB.linearVel = bodyB.linearVel.add(impulse.multiply(bodyB.invMass));
-  }
-
-  /**
-   * Narrowphase collide wrapper (C# Collide parity).
-   * Returns { result, normal, depth } and leaves resolution to caller.
-   */
-  collide(objectA, objectB) {
-    // Prefer a definite zero vector to avoid Vec2.ZERO / ZERO() inconsistencies
-    let normal = new Vec2(0, 0);
-    let depth = 0;
-
-    // Box vs Box
-    if (objectA instanceof Box) {
-      if (objectB instanceof Box) {
-        const vertsA = objectA.getVertexWorldPos();
-        const vertsB = objectB.getVertexWorldPos();
-
-        const hit = intersectPolygons(objectA.pos, vertsA, objectB.pos, vertsB);
-        if (!hit.result) return { result: false };
-        normal = hit.normal;
-        depth = hit.depth;
-        return { result: true, normal, depth };
-      }
-
-      // Box vs Ball  (invert normal after circle-vs-poly to match A->B direction)
-      if (objectB instanceof Ball) {
-        const vertsA = objectA.getVertexWorldPos();
-        const hit = intersectCirclePolygon(
-          objectB.pos,
-          objectB.radius,
-          objectA.pos,
-          vertsA
-        );
-        if (!hit.result) return { result: false };
-        normal = hit.normal.negate(); // make normal point from A(Box) -> B(Ball)
-        depth = hit.depth;
-        return { result: true, normal, depth };
-      }
-    }
-
-    // Ball vs ...
-    if (objectA instanceof Ball) {
-      if (objectB instanceof Box) {
-        const vertsB = objectB.getVertexWorldPos();
-        const hit = intersectCirclePolygon(
-          objectA.pos,
-          objectA.radius,
-          objectB.pos,
-          vertsB
-        );
-        if (!hit.result) return { result: false };
-        normal = hit.normal; // already A(Ball) -> B(Box)
-        depth = hit.depth;
-        return { result: true, normal, depth };
-      }
-
-      if (objectB instanceof Ball) {
-        const hit = intersectCircles(
-          objectA.pos,
-          objectA.radius,
-          objectB.pos,
-          objectB.radius
-        );
-        if (!hit.result) return { result: false };
-        normal = hit.normal; // A -> B
-        depth = hit.depth;
-        return { result: true, normal, depth };
-      }
-    }
-
-    return { result: false };
   }
 }

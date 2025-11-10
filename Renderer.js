@@ -113,6 +113,30 @@ export default class Renderer {
     gl.drawArrays(gl.TRIANGLES, 0, ball.verticesSize);
   }
 
+  getDebugPoint(pos){
+    const size = 1;
+    return [
+      0,0,
+      0,size,
+      size,size,
+      size,size,
+      size,0,
+      0,0
+    ];
+  }
+
+  drawDebugPoint(pos){
+    const gl = this.gl;
+    const [r, g, b] = [255, 255, 255];
+    const color = this.normalizeColor(r, g, b);
+    gl.uniform4f(this.colorUniformLocation, color[0], color[1], color[2], color[3]);
+    gl.bindVertexArray(this.vao);
+
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.getDebugPoint()), gl.DYNAMIC_DRAW);
+    gl.uniform2f(this.translationUniformLocation, pos.x, pos.y);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+  }
+
   drawBox(box) {
     const gl = this.gl;
     const [r, g, b] = box.color;
